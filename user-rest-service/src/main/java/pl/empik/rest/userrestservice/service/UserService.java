@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -40,22 +39,22 @@ public class UserService {
 
     public Optional<UserResponseDto> getUserByLogin(String login) {
         Optional<UserDto> userDtoOptional = getAllUsers().stream().filter(c -> c.login.equalsIgnoreCase(login)).findAny();
-        if (!userDtoOptional.isPresent()) {
-            return null;
+        if (userDtoOptional.isEmpty()) {
+            return Optional.of(new UserResponseDto());
         }
         UserDto existingUser = userDtoOptional.get();
         int followersCount = getFollowersCount(existingUser);
-        int repositoriesCount = getRepositiesCount(existingUser);
+        int repositoriesCount = getRepositoriesCount(existingUser);
         checkAndUpdateLoginRegistry(login);
         return Optional.of(mapToUserResponseDto(existingUser, followersCount, repositoriesCount));
     }
 
     private void checkAndUpdateLoginRegistry(String login) {
         List<LoginRegistryDto> registriesDto = convertToLoginRegistryDtoList();
-        Optional<LoginRegistryDto> loginRegistryDto = getParticularRegistryDtoByLogin(login,registriesDto);
+        Optional<LoginRegistryDto> loginRegistryDto = getParticularRegistryDtoByLogin(login, registriesDto);
 
-        if (!loginRegistryDto.isPresent()) {
-            loginRegistryRepository.save(new LoginRegistry(login, Long.valueOf(1)));
+        if (loginRegistryDto.isEmpty()) {
+            loginRegistryRepository.save(new LoginRegistry(login, 1L));
         } else {
             loginRegistryDto.get().setRequestCount(loginRegistryDto.get().getRequestCount() + 1);
             loginRegistryRepository.save(loginRegistryMapper.loginRegistryDtoToLoginRegistry(loginRegistryDto.get()));
@@ -83,7 +82,7 @@ public class UserService {
 
     private double getCalculationResult(int followersCount, int repositoriesCount) {
         double calculation;
-        double scale = Math.pow(10, 10);
+        double scale = Math.pow(10, 5);
         if (followersCount != 0) {
             calculation = Math.round(((6.0 / followersCount) * (2 + repositoriesCount)) * scale) / scale;
         } else {
@@ -98,16 +97,23 @@ public class UserService {
         }
         Object[] followersCollection = restTemplateBuilder
                 .build().getForEntity(existingUser.followers_url, Object[].class).getBody();
+
+        if (followersCollection == null) {
+            return 0;
+        }
         return followersCollection.length;
     }
 
-    private int getRepositiesCount(UserDto existingUser) {
+    private int getRepositoriesCount(UserDto existingUser) {
         if (existingUser.repos_url.isEmpty() || existingUser.repos_url.isBlank()) {
             return 0;
         }
         RepositoryDto[] repositoriesCollection = restTemplateBuilder
                 .build().getForEntity(existingUser.repos_url, RepositoryDto[].class).getBody();
-        return Arrays.asList(repositoriesCollection).stream().filter(r->!r.isPrivate).collect(Collectors.toList()).size();
+        if (repositoriesCollection == null) {
+            return 0;
+        }
+        return Arrays.stream(repositoriesCollection).filter(r -> !r.isPrivate).toList().size();
     }
 
     private List<UserDto> getAllUsers() {
