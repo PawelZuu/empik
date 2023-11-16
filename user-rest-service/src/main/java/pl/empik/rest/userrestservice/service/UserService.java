@@ -85,7 +85,7 @@ public class UserService {
         double calculation;
         double scale = Math.pow(10, 10);
         if (followersCount != 0) {
-            calculation = Math.round((6.0 / (followersCount * (2 + repositoriesCount))) * scale) / scale;
+            calculation = Math.round(((6.0 / followersCount) * (2 + repositoriesCount)) * scale) / scale;
         } else {
             calculation = 0.0;
         }
