@@ -12,8 +12,6 @@ import org.springframework.web.bind.annotation.RestController;
 import pl.empik.rest.userrestservice.dto.UserResponseDto;
 import pl.empik.rest.userrestservice.service.UserService;
 
-import java.util.Optional;
-
 @RestController
 @RequestMapping("/users")
 public class UserController {
@@ -22,10 +20,10 @@ public class UserController {
     UserService userService;
 
     @GetMapping(path = "/{login}")
-    public ResponseEntity<Optional<UserResponseDto>> getUser(@PathVariable String login) {
+    public ResponseEntity<UserResponseDto> getUser(@PathVariable String login) {
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.add("UserData", "/users" + "/" + login);
-        return new ResponseEntity<>(userService.getUserByLogin(login), httpHeaders, HttpStatus.OK);
+        return new ResponseEntity<>(userService.getUserByLogin(login).get(), httpHeaders, HttpStatus.OK);
     }
 
 }
